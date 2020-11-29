@@ -1,16 +1,38 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "automaton.h"
 
+#define PROG  1
+#define ID    2
+#define OCURL 3
+#define CCURL 4
+#define IF    5
+#define THEN  6
+#define ELSE  7
+#define RELOP 8
+#define TYPE  9
+#define OP    10
+#define OPAR  11
+#define CPAR  12
+#define COLON 13
+#define WHILE 14
+#define DO    15
+#define CONST 16
+#define COMMT 17
 
 int carrega_final(Automaton *a, char *final);
 int carrega_inicial(Automaton *a, char *inicial);
+void carrega_estados(Automaton *a, char *estados);
 int carrega_delta(Automaton *a, char *delta);
-
+int pertence_estado(Automaton a, char *estado);
+void atribui(char *a, char *b);
+void mostrarAutomato(Automaton a);
 
 struct state{
     char state_name[15];
     int token_type;
+    char token_name[15];
     int return_car;
 };
 typedef struct state State;
@@ -23,8 +45,11 @@ struct delta {
 typedef struct delta Delta;
 
 int main(){
-    carrega_automato("Automato05.dat");
+    Automaton a;
+    a = carrega_automato("Automaton_new_model.dat");
+    //mostrarAutomato(a);
 }
+
 struct automaton {
     State states[300];
     int n_states;
@@ -49,6 +74,7 @@ Automaton carrega_automato(char* caminho) {
     if(!strcmp(temp, "estados")) {
         fscanf(f, "%s", temp); //Lê os estados
         carrega_estados(&a, temp);
+        return 0;
         printf("%d states loaded: \n", a->n_states);
         int i;
         for(i = 0; i < a->n_states; i++) {
@@ -71,7 +97,7 @@ Automaton carrega_automato(char* caminho) {
         printf("%d functions loaded:\n", a->n_functions);
         int i;
         for(i = 0; i < a->n_functions; i++) {
-            printf("(%s,%s,%s)\n", a->transition_functions[i].src, a->transition_functions[i].transition, a->transition_functions[i].dest );
+            printf("(%s,%s,%s)\n", a->transition_functions[i].src.state_name, a->transition_functions[i].transition, a->transition_functions[i].dest.state_name );
         }
     }
     else {
@@ -100,6 +126,7 @@ Automaton carrega_automato(char* caminho) {
     //Carrega os estados final do Automato
     if(!strcmp(temp, "final")) {
         fscanf(f, "%s", temp); //Lê os estados finais
+        printf("Leu a sessao estados finais do arquivo: %s\n", temp);
         if(!carrega_final(&a, temp))
             return NULL;
         if(a->n_final_states == 1)
@@ -140,10 +167,11 @@ int carrega_final(Automaton *a, char *final) {
                 j++;
                 m++;
             } else { //Se os dois estados forem diferentes, avança pro próximo estado
-                if(i < (*a)->n_final_states) { //Verifica se os estados acabaram
+                if(i < (*a)->n_states) { //Verifica se os estados acabaram
                     i++;
                 }
-                    else { //Se os estados tiverem acabado, retorna erro
+                else { //Se os estados tiverem acabado, retorna erro
+                    printf("Total de estados em n_final_states %d\n",(*a)->n_final_states);
                     printf("Estado final invalido encontrado\n");
                     return 0;
                 }
@@ -228,12 +256,12 @@ int carrega_delta(Automaton *a, char *delta) {
                     printf("Estado 1: O estado nao %s pertence ao automato\n", temp);
                     return 0;
                 }
-                atribui((*a)->transition_functions[n].src, temp);
+                atribui((*a)->transition_functions[n].src.state_name, temp);
                 j++;
-                if(!pertence_alfabeto(*a, delta[j])) {
-                    printf("O simbolo de transicao deve fazer parte do alfabeto do automato, \"%c\" nao pertence ao alfabeto\n", delta[j]);
-                    return 0;
-                }
+                // if(!pertence_alfabeto(*a, delta[j])) {
+                //     printf("O simbolo de transicao deve fazer parte do alfabeto do automato, \"%c\" nao pertence ao alfabeto\n", delta[j]);
+                //     return 0;
+                // }
                 //TODO : A transicao n eh mais um caracter individual, tem que refazer 
                 (*a)->transition_functions[n].transition[0] = delta[j];
                 if(delta[j+1] != ',') {
@@ -254,7 +282,7 @@ int carrega_delta(Automaton *a, char *delta) {
                     return 0;
                 }
 
-                atribui((*a)->transition_functions[n].dest, temp);
+                atribui((*a)->transition_functions[n].dest.state_name, temp);
 
                 n++;
             }
@@ -279,6 +307,85 @@ int pertence_estado(Automaton a, char *estado) {
             return 1;
     }
     return 0;
+}
+
+void carrega_estados(Automaton *a, char *estados) {
+    int i, j = 0, k = 0;
+    char temp[40];
+    char temp2[40];
+    char truple_values[4][40];
+    int n_elements_in_truple=0;
+    int is_truple = 0;
+    for(i = 0; i <= strlen(estados); i++) {
+        if(estados[i] == '(' || estados[i] == ')'){
+            if(estados[i] == '(')
+                is_truple=1;
+            else
+                is_truple=0;     
+        }
+        else{
+            if((estados[i] != ',' || is_truple) && estados[i] != '\0') {
+                temp[k] = estados[i];
+                temp[k+1] = '\0';
+                k++;
+            } else {
+                k = 0;
+                int n;
+                //for(n = 0; n <= strlen(temp); n++)
+                //    (*a)->states[j].state_name[n] = temp[n];
+                printf("Leu o estado %s\n", temp);
+                int i_temp2=0;
+                n_elements_in_truple=0;
+                for(int i=0; i<strlen(temp); i++){
+                    if(temp[i] != '\0' && temp[i] != ','){
+                        temp2[i_temp2] = temp[i];
+                        i_temp2++;
+                    }
+                    else{
+                        temp2[i_temp2] = '\0';
+                        //printf("Pegou %s\n", temp2);
+                        strcpy(truple_values[n_elements_in_truple], temp2);
+                        n_elements_in_truple++;
+                        i_temp2=0;
+                        temp2[0] = '\0';
+                    }
+                    //printf("Pegou %s\n", truple_values[n_elements_in_truple]);
+                }
+                j++;
+            }
+        }
+    }
+    (*a)->n_states = j;
+}
+
+//Atribui o valor de b em a
+void atribui(char *a, char *b) {
+    unsigned i;
+    for(i = 0; i < strlen(b); i++) {
+        a[i] = b[i];
+        a[i+1] = '\0';
+    }
+}
+
+
+void mostrarAutomato(Automaton a){
+    int i;
+    printf("Estados:\n{");
+    for(i=0;i<a->n_states;i++)
+        printf("%s%s",a->states[i].state_name, i < a->n_states - 1 ? ", " : "}\n");
+    printf("Número de estados: %d\n",a->n_states);
+    //printf("Alfabeto:\n%s\n",a->alfabeto);
+    printf("Funções de transição\n");
+    for(i=0;i<a->n_functions;i++)
+        printf("Origem: %s\t Destino: %s\t Transição: %s\n",a->transition_functions[i].src.state_name,a->transition_functions[i].dest.state_name,a->transition_functions[i].transition);
+    printf("Quantidade de funções de transição: %d\n",a->n_functions);
+    printf("Estado inicial: \"%s\"\n",a->begin_state.state_name);
+    if(a->n_final_states > 1)
+      printf("Estados finais: ");
+    else
+      printf("Estado final: ");
+    for(i=0;i<a->n_final_states;i++)
+        printf("\"%s\"\n",a->final_states[i].state_name);
 }
 
 // ReturnState consume(Automaton a, char c) {
