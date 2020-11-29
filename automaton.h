@@ -1,15 +1,40 @@
 #ifndef AUTOMATON_H_DEFINED
 #define AUTOMATON_H_DEFINED
 
+#define PROG  1
+#define ID    2
+#define OCURL 3
+#define CCURL 4
+#define IF    5
+#define THEN  6
+#define ELSE  7
+#define RELOP 8
+#define TYPE  9
+#define OP    10
+#define OPAR  11
+#define CPAR  12
+#define COLON 13
+#define WHILE 14
+#define DO    15
+#define CONST 16
+#define COMMT 17
+
 struct returnState {
      int tokenID;
      int returnCar;
  };
 
  typedef struct automaton* Automaton;
- typedef struct returnState ReturnState;
+ typedef struct returnState* ReturnState;
  Automaton carrega_automato(char* caminho);
 
+/*
+ * Returns a struct containing a value indicating if the car need to be returned
+ * if returnCar is 0, then the car is not to be returned, else it must return.
+ * The other attribute of the struct is tokenID, it indicates the ID of the
+ * token, or if the current state is not a final state, it returns 0, or else if
+ * the token is not valid, it returns a value < 0.
+ */
  ReturnState consume(Automaton automaton, char car);
 
 #endif
