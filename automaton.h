@@ -8,6 +8,7 @@ struct returnState {
 
  typedef struct automaton* Automaton;
  typedef struct returnState ReturnState;
+ Automaton carrega_automato(char* caminho);
 
  ReturnState consume(Automaton automaton, char car);
 

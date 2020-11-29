@@ -1,5 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "automaton.h"
+
+
+int carrega_final(Automaton *a, char *final);
+int carrega_inicial(Automaton *a, char *inicial);
+int carrega_delta(Automaton *a, char *delta);
+
 
 struct state{
     char state_name[15];
@@ -15,6 +22,9 @@ struct delta {
 };
 typedef struct delta Delta;
 
+int main(){
+    carrega_automato("Automato05.dat");
+}
 struct automaton {
     State states[300];
     int n_states;
@@ -27,7 +37,7 @@ struct automaton {
 };
 
 Automaton carrega_automato(char* caminho) {
-    FILE* f = fopen(caminho, "r");
+    FILE *f = fopen(caminho, "r");
     if(f == NULL) {
       printf("File not found\n");
       return NULL;
@@ -259,6 +269,16 @@ int carrega_delta(Automaton *a, char *delta) {
     }
     (*a)->n_functions = n;
     return 1;
+}
+
+//Verifica se o estado pertence ao automato
+int pertence_estado(Automaton a, char *estado) {
+    unsigned i;
+    for(i = 0; i < a->n_states; i++) {
+        if(!strcmp(a->states[i].state_name, estado))
+            return 1;
+    }
+    return 0;
 }
 
 // ReturnState consume(Automaton a, char c) {
