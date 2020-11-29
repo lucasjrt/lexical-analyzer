@@ -26,6 +26,7 @@ struct returnState {
 
  typedef struct automaton* Automaton;
  typedef struct returnState* ReturnState;
+ 
  Automaton carrega_automato(char* caminho);
 
 /*
