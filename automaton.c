@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "automaton.h"
 
 #define PROG  1
@@ -36,15 +37,6 @@ struct delta {
 };
 typedef struct delta Delta;
 
-int carrega_final(Automaton *a, char *final);
-int carrega_inicial(Automaton *a, char *inicial);
-void carrega_estados(Automaton *a, char *estados);
-int carrega_delta(Automaton *a, char *delta);
-State *pertence_estado(Automaton a, char *estado);
-void atribui(char *a, char *b);
-void mostrarAutomato(Automaton a);
-
-
 int main(){
     Automaton a;
     a = carrega_automato("Automaton_new_model.dat");
@@ -61,6 +53,18 @@ struct automaton {
     int n_final_states;
     int current_state;
 };
+
+int carrega_final(Automaton *a, char *final);
+int carrega_inicial(Automaton *a, char *inicial);
+void carrega_estados(Automaton *a, char *estados);
+int carrega_delta(Automaton *a, char *delta);
+State *pertence_estado(Automaton a, char *estado);
+void atribui(char *a, char *b);
+void mostrarAutomato(Automaton a);
+State *inserirEstado(Automaton *a, char *state_name, char *token_type, char *token_name, int return_car);
+void mostrarEstados(Automaton a);
+int getIntTokenType(char *tokenType);
+
 
 Automaton carrega_automato(char* caminho) {
     FILE *f = fopen(caminho, "r");
@@ -346,7 +350,10 @@ void carrega_estados(Automaton *a, char *estados) {
     char truple_values[4][40];
     int n_elements_in_truple=0;
     int is_truple = 0;
+
+    //Percorre cada caractere da string de estados
     for(i = 0; i <= strlen(estados); i++) {
+        //Se for um objeto 
         if(estados[i] == '(' || estados[i] == ')'){
             if(estados[i] == '(')
                 is_truple=1;
@@ -363,29 +370,92 @@ void carrega_estados(Automaton *a, char *estados) {
                 int n;
                 //for(n = 0; n <= strlen(temp); n++)
                 //    (*a)->states[j].state_name[n] = temp[n];
-                printf("Leu o estado %s\n", temp);
                 int i_temp2=0;
                 n_elements_in_truple=0;
-                for(int i=0; i<strlen(temp); i++){
-                    if(temp[i] != '\0' && temp[i] != ','){
+                for(int i=0; i<strlen(temp)+1; i++){
+                    if(temp[i] != ',' && temp[i] != '\0'){
                         temp2[i_temp2] = temp[i];
                         i_temp2++;
                     }
                     else{
                         temp2[i_temp2] = '\0';
-                        //printf("Pegou %s\n", temp2);
                         strcpy(truple_values[n_elements_in_truple], temp2);
                         n_elements_in_truple++;
-                        i_temp2=0;
                         temp2[0] = '\0';
+                        i_temp2=0;
                     }
-                    //printf("Pegou %s\n", truple_values[n_elements_in_truple]);
+                }
+                if(n_elements_in_truple==1){
+                    inserirEstado(a, truple_values[0],truple_values[1], "", 0);
+                }
+                else{
+                    if(truple_values[3][0] == 't')
+                        inserirEstado(a, truple_values[0],truple_values[1], truple_values[2], 1);
+                    else
+                        inserirEstado(a, truple_values[0],truple_values[1], truple_values[2], 0);
                 }
                 j++;
             }
         }
     }
     (*a)->n_states = j;
+}
+
+State *inserirEstado(Automaton *a, char *state_name, char *token_type, char *token_name, int return_car){
+    State *s = (State*) malloc(sizeof(struct state));
+    if(s == NULL)
+        return NULL;
+    strcpy(s->state_name, state_name);
+    s->token_type = getIntTokenType(token_type);
+    strcpy(s->token_name, token_name);
+    s->return_car = return_car;
+    (*a)->states[(*a)->n_states] = *s;
+    (*a)->n_states++;
+    return s;
+}
+
+int getIntTokenType(char *tokenType) {
+    char token_upper[40];
+    for(int i=0; i<strlen(tokenType); i++)
+        token_upper[i] = toupper(tokenType[i]);
+    token_upper[strlen(tokenType)] = '\0';
+    if(tokenType == NULL)
+        return -1;
+    if(!strcmp("PROG", token_upper))
+        return PROG;
+    if(!strcmp("ID", token_upper))
+        return ID;
+    if(!strcmp("OCURL", token_upper))
+        return OCURL;
+    if(!strcmp("CCURL", token_upper))
+        return CCURL;
+    if(!strcmp("IF", token_upper))
+        return IF;
+    if(!strcmp("THEN", token_upper))
+        return THEN;
+    if(!strcmp("ELSE", token_upper))
+        return ELSE;
+    if(!strcmp("RELOP", token_upper))
+        return RELOP;
+    if(!strcmp("TYPE", token_upper))
+        return TYPE;
+    if(!strcmp("OP", token_upper))
+        return OP;
+    if(!strcmp("OPAR", token_upper))
+        return OPAR;
+    if(!strcmp("CPAR", token_upper))
+        return CPAR;
+    if(!strcmp("COLON", token_upper))
+        return COLON;
+    if(!strcmp("WHILE", token_upper))
+        return WHILE;
+    if(!strcmp("DO", token_upper))
+        return DO;
+    if(!strcmp("CONST", token_upper))
+        return CONST;
+    if(!strcmp("COMMT", token_upper))
+        return COMMT;
+    return -1;
 }
 
 //Atribui o valor de b em a
@@ -416,6 +486,18 @@ void mostrarAutomato(Automaton a){
       printf("Estado final: ");
     for(i=0;i<a->n_final_states;i++)
         printf("\"%s\"\n",a->final_states[i].state_name);
+}
+
+void mostrarEstados(Automaton a){
+    int i;
+    printf("Estados:\n");
+    for(i=0;i<a->n_states;i++){
+       printf("State Name: %s\n", a->states[i].state_name);
+       printf("Token type: %d\n", a->states[i].token_type);
+       printf("Token Name: %s\n", a->states[i].token_name);
+       printf("Return Car: %d\n\n", a->states[i].return_car);
+    }
+    printf("Número de estados: %d\n",a->n_states);
 }
 
 // ReturnState consume(Automaton a, char c) {
