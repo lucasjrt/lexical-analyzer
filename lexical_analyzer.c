@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 
         state = consume(automaton, car);
         token[tokenSize++] = car;
-        if(state.returnCar) {
+        if(state->returnCar) {
             fseek(source_code, -1, SEEK_CUR);
         }
 
