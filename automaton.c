@@ -131,7 +131,7 @@ Automaton carrega_automato(char* caminho) {
     //Carrega os estados final do Automato
     if(!strcmp(temp, "final")) {
         fscanf(f, "%s", temp); //Lê os estados finais
-        printf("Leu a sessao estados finais do arquivo: %s\n", temp);
+        printf("Leu a secao estados finais do arquivo: %s\n", temp);
         if(!carrega_final(&a, temp))
             return NULL;
         if(a->n_final_states == 1)
@@ -233,7 +233,7 @@ int carrega_inicial(Automaton *a, char *inicial) {
 
 //Retorna 1 se sucesso, 0 se erro
 int carrega_delta(Automaton *a, char *delta) {
-    int j = 1, k, current_delta = 0;
+    int j = 0, k, current_delta = 0;
     //j: percorre delta
     //k: percorre o vetor temp
     while(delta[j] != '\0') { //Percorre todo o vetor delta
@@ -246,27 +246,27 @@ int carrega_delta(Automaton *a, char *delta) {
                 else {
                     j++;
                 }
-                char temp_delta[15];
+                char temp_src[15];
                 k = 0;
                 while(delta[j] != ',') {
-                    temp_delta[k] = delta[j];
+                    if(k >= 14) {
+                        printf("Max state name reached for src state. Column: %d\n", j);
+                        exit(1);
+                    }
+                    temp_src[k] = delta[j];
                     j++;
                     k++;
                 }
-                temp_delta[k]='\0';
+                temp_src[k]='\0';
 
-                printf("Verificando se o estado lido pertence aos estados do automato\n");
-                State* src = pertence_estado(*a, temp_delta);
+                State* src = pertence_estado(*a, temp_src);
                 if(src == NULL) {
-                    printf("Estado 1: O estado nao %s pertence ao automato\n", temp_delta);
+                    printf("Estado 1: O estado nao %s pertence ao automato\n", temp_src);
                     return 0;
                 }
-                printf("Pertence estado funcionando.\n");
                 (*a)->transition_functions[current_delta].src = *src;
                 // atribui((*a)->transition_functions[n].src.state_name, temp); // < esse é o que tava
                 // atribui(src->state_name, temp); // < esse foi o que eu modifiquei
-                
-                j++;
                 // if(!pertence_alfabeto(*a, delta[j])) {
                 //     printf("O simbolo de transicao deve fazer parte do alfabeto do automato, \"%c\" nao pertence ao alfabeto\n", delta[j]);
                 //     return 0;
@@ -291,7 +291,8 @@ int carrega_delta(Automaton *a, char *delta) {
                     }
                     temp_regex[k++] = delta[j++];
                 }
-                temp_regex[j] = '\0';
+                temp_regex[k] = '\0';
+
                 strncpy((*a)->transition_functions[current_delta].transition, temp_regex, 15);
                 j++;
                 if (delta[j] != ',') {
@@ -302,30 +303,40 @@ int carrega_delta(Automaton *a, char *delta) {
 
                 k = 0;
                 while(delta[j] != ')') {
-                    temp_delta[k] = delta[j];
+                    temp_src[k] = delta[j];
                     j++;
                     k++;
                 }
-                temp_delta[k]='\0';
-                State *dest = pertence_estado(*a, temp_delta);
-                if(dest != NULL) {
-                    printf("Estado 2: O estado %s nao pertence ao automato\n", temp_delta);
+                temp_src[k]='\0';
+                State *dest = pertence_estado(*a, temp_src);
+                if(dest == NULL) {
+                    printf("Estado 2: O estado %s nao pertence ao automato\n", temp_src);
                     return 0;
                 }
 
                 (*a)->transition_functions[current_delta].dest = *dest;
                 // atribui((*a)->transition_functions[current_delta].dest.state_name, temp_delta);
 
+                // printf("Delta lido:\n");
+                // printf("src:\n");
+                // printf("State name: %s\n", (*a)->transition_functions[current_delta].src.state_name);
+                // printf("Token name: %s\n", (*a)->transition_functions[current_delta].src.token_name);
+                // printf("Token type: %d\n", (*a)->transition_functions[current_delta].src.token_type);
+                // printf("Return car: %d\n", (*a)->transition_functions[current_delta].src.return_car);
+                // printf("\nTransition:\n");
+                // printf("Transition string: %s\n", (*a)->transition_functions[current_delta].transition);
+                // printf("\ndest:\n");
+                // printf("State name: %s\n", (*a)->transition_functions[current_delta].dest.state_name);
+                // printf("Token name: %s\n", (*a)->transition_functions[current_delta].dest.token_name);
+                // printf("Token type: %d\n", (*a)->transition_functions[current_delta].dest.token_type);
+                // printf("Return car: %d\n", (*a)->transition_functions[current_delta].dest.return_car);
+                
                 current_delta++;
             }
         }
         else {
             j++;
         }
-    }
-    if(delta[j-1] != '}') {
-        printf("As funcoes devem estar entre chaves no arquivo\n");
-        return 0;
     }
     (*a)->n_functions = current_delta;
     return 1;
@@ -335,7 +346,6 @@ int carrega_delta(Automaton *a, char *delta) {
 State *pertence_estado(Automaton a, char *estado) {
     unsigned i;
     for(i = 0; i < a->n_states; i++) {
-        printf("%s\n", a->states[i].state_name);
         if(!strcmp(a->states[i].state_name, estado)) {
             return &(a->states[i]);
         }
