@@ -20,23 +20,24 @@
 #define COMMT 17
 
 struct returnState {
-     int tokenID;
-     int returnCar;
- };
+    char token_name[32];
+    int tokenType;
+    int returnCar;
+};
 
- typedef struct automaton* Automaton;
- typedef struct returnState* ReturnState;
+typedef struct automaton* Automaton;
+typedef struct returnState* ReturnState;
  
- Automaton carrega_automato(char* caminho);
-
+Automaton create_automaton(char* caminho);
+int reset_automaton(Automaton *a);
 /*
  * Returns a struct containing a value indicating if the car need to be returned
  * if returnCar is 0, then the car is not to be returned, else it must return.
- * The other attribute of the struct is tokenID, it indicates the ID of the
+ * The other attribute of the struct is tokenType, it indicates the ID of the
  * token, or if the current state is not a final state, it returns 0, or else if
  * the token is not valid, it returns a value < 0.
  */
- ReturnState consume(Automaton automaton, char car);
+ReturnState consume(Automaton automaton, char car);
 
 #endif
 

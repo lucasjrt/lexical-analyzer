@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <regex.h>
+
 #include "automaton.h"
 
 #define PROG  1
@@ -23,9 +25,9 @@
 #define COMMT 17
 
 struct state{
-    char state_name[15];
+    char state_name[32];
     int token_type;
-    char token_name[15];
+    char token_name[32];
     int return_car;
 };
 typedef struct state State;
@@ -37,36 +39,42 @@ struct delta {
 };
 typedef struct delta Delta;
 
-int main(){
-    Automaton a;
-    a = carrega_automato("Automaton_new_model.dat");
-    //mostrarAutomato(a);
-}
 
 struct automaton {
     State states[300];
     int n_states;
     Delta transition_functions[300];
     int n_functions;
-    State begin_state;
+    State *begin_state;
     State final_states[300];
     int n_final_states;
-    int current_state;
+    State *current_state;
 };
 
 int carrega_final(Automaton *a, char *final);
 int carrega_inicial(Automaton *a, char *inicial);
 void carrega_estados(Automaton *a, char *estados);
 int carrega_delta(Automaton *a, char *delta);
-State *pertence_estado(Automaton a, char *estado);
+State *get_state(Automaton a, char *estado);
 void atribui(char *a, char *b);
 void mostrarAutomato(Automaton a);
 State *inserirEstado(Automaton *a, char *state_name, char *token_type, char *token_name, int return_car);
 void mostrarEstados(Automaton a);
 int getIntTokenType(char *tokenType);
+ReturnState consume(Automaton a, char c);
+int match_regex(char *string, char ch);
 
+// int main(){
+//     Automaton a;
+//     a = carrega_automato("Automaton_new_model.dat");
+//     // ReturnState return_regex;
+//     // return_regex = consume(a, '>');
+//     printf("Return: %d\n", match_regex("[<=>]", '['));
+    
+//     //mostrarAutomato(a);
+// }
 
-Automaton carrega_automato(char* caminho) {
+Automaton create_automaton(char* caminho) {
     FILE *f = fopen(caminho, "r");
     if(f == NULL) {
       printf("File not found\n");
@@ -80,6 +88,7 @@ Automaton carrega_automato(char* caminho) {
         fscanf(f, "%s", temp); //Lê os estados
         carrega_estados(&a, temp);
         printf("%d states loaded: \n", a->n_states);
+        mostrarEstados(a);
         int i;
         for(i = 0; i < a->n_states; i++) {
             printf("%s%s", a->states[i].state_name, (i < a->n_states - 1 ? ", ":""));
@@ -92,6 +101,7 @@ Automaton carrega_automato(char* caminho) {
     }
     fscanf(f, "%s", temp); //Lê "delta"
     //Carrega as funcoes delta do automato
+    printf("1\n\n");
     if(!strcmp(temp, "delta")) {
         fscanf(f, "%s", temp); //Lê as funções delta
         if(!carrega_delta(&a, temp)) {
@@ -108,7 +118,6 @@ Automaton carrega_automato(char* caminho) {
         printf( "Can't find delta functions in the file\n");
         return NULL;
     }
-    return 0;
     fscanf(f, "%s", temp); // Lê "inicial"
     //Carrega o estado inicial do automato
     if(!strcmp(temp, "inicial")) {
@@ -117,11 +126,13 @@ Automaton carrega_automato(char* caminho) {
           return NULL;
           printf("Nao foi possivel carregar o estado inicial\n");
         }
-        if(!strlen(a->begin_state.state_name)) {
+        if(!strlen(a->begin_state->state_name)) {
           printf("O automato deve ter um estado inicial\n");
           return NULL;
         }
-        printf("Estado inicial carregado:\n" "%s\n", a->begin_state.state_name);
+        a->current_state = a->begin_state;
+        printf("Current State: %s\n", a->current_state->state_name);
+        printf("Estado inicial carregado:\n" "%s\n", a->begin_state->state_name);
     }
     else {
         printf("Nao foi possivel encontrar o estado inicial do automato no arquivo\n");
@@ -201,7 +212,6 @@ int carrega_final(Automaton *a, char *final) {
 //Retorna 1 se sucesso, 0 se erro
 int carrega_inicial(Automaton *a, char *inicial) {
     int i, j;
-    unsigned n;
     for(i = 0; i < (*a)->n_states; i++) { //Verifica se a palavra existe nos estados do automato
         j = 0;
         while((*a)->states[i].state_name[j] != '\0' && inicial[j] != '\0') { //Equanto a palavra não acabar
@@ -214,9 +224,12 @@ int carrega_inicial(Automaton *a, char *inicial) {
             if(inicial[j+1] != '\0')
                 j++;
             else {
-                for(n = 0; n < strlen(inicial); n++) {
-                    (*a)->begin_state.state_name[n] = inicial[n];
+                State *begin_state = get_state(*a, inicial);
+                if(begin_state == NULL){
+                    printf("Invalid begin state\n");
+                    exit(1);
                 }
+                (*a)->begin_state = begin_state;
                 j++;
                 break;
             }
@@ -224,7 +237,7 @@ int carrega_inicial(Automaton *a, char *inicial) {
         if(j >= strlen(inicial))
             break;
     }
-    if(!strlen((*a)->begin_state.state_name)) {
+    if(!strlen((*a)->begin_state->state_name)) {
         printf("Nenhum estado inicial foi encontrado\n");
         return 0;
     }
@@ -259,7 +272,7 @@ int carrega_delta(Automaton *a, char *delta) {
                 }
                 temp_src[k]='\0';
 
-                State* src = pertence_estado(*a, temp_src);
+                State* src = get_state(*a, temp_src);
                 if(src == NULL) {
                     printf("Estado 1: O estado nao %s pertence ao automato\n", temp_src);
                     return 0;
@@ -308,7 +321,7 @@ int carrega_delta(Automaton *a, char *delta) {
                     k++;
                 }
                 temp_src[k]='\0';
-                State *dest = pertence_estado(*a, temp_src);
+                State *dest = get_state(*a, temp_src);
                 if(dest == NULL) {
                     printf("Estado 2: O estado %s nao pertence ao automato\n", temp_src);
                     return 0;
@@ -343,7 +356,7 @@ int carrega_delta(Automaton *a, char *delta) {
 }
 
 //Verifica se o estado pertence ao automato
-State *pertence_estado(Automaton a, char *estado) {
+State *get_state(Automaton a, char *estado) {
     unsigned i;
     for(i = 0; i < a->n_states; i++) {
         if(!strcmp(a->states[i].state_name, estado)) {
@@ -377,9 +390,6 @@ void carrega_estados(Automaton *a, char *estados) {
                 k++;
             } else {
                 k = 0;
-                int n;
-                //for(n = 0; n <= strlen(temp); n++)
-                //    (*a)->states[j].state_name[n] = temp[n];
                 int i_temp2=0;
                 n_elements_in_truple=0;
                 for(int i=0; i<strlen(temp)+1; i++){
@@ -396,7 +406,8 @@ void carrega_estados(Automaton *a, char *estados) {
                     }
                 }
                 if(n_elements_in_truple==1){
-                    inserirEstado(a, truple_values[0],truple_values[1], "", 0);
+                    printf("Vai inserir: %s\n", truple_values[0]);
+                    inserirEstado(a, truple_values[0], NULL, "", 0);
                 }
                 else{
                     if(truple_values[3][0] == 't')
@@ -416,7 +427,11 @@ State *inserirEstado(Automaton *a, char *state_name, char *token_type, char *tok
     if(s == NULL)
         return NULL;
     strcpy(s->state_name, state_name);
-    s->token_type = getIntTokenType(token_type);
+    if(token_type == NULL){
+        s->token_type = -1;
+    }else{
+        s->token_type = getIntTokenType(token_type);
+    }
     strcpy(s->token_name, token_name);
     s->return_car = return_car;
     (*a)->states[(*a)->n_states] = *s;
@@ -489,7 +504,7 @@ void mostrarAutomato(Automaton a){
     for(i=0;i<a->n_functions;i++)
         printf("Origem: %s\t Destino: %s\t Transição: %s\n",a->transition_functions[i].src.state_name,a->transition_functions[i].dest.state_name,a->transition_functions[i].transition);
     printf("Quantidade de funções de transição: %d\n",a->n_functions);
-    printf("Estado inicial: \"%s\"\n",a->begin_state.state_name);
+    printf("Estado inicial: \"%s\"\n",a->begin_state->state_name);
     if(a->n_final_states > 1)
       printf("Estados finais: ");
     else
@@ -510,17 +525,55 @@ void mostrarEstados(Automaton a){
     printf("Número de estados: %d\n",a->n_states);
 }
 
-// ReturnState consume(Automaton a, char c) {
-//     //exemplo delta 0,[a-z],1
-//     Delta relevant_deltas[300]; // estados que possuem o estado inicial como state0
-//     ReturnState return_state = { -1, 0};
-//     for (int i = 0; i < a->n_functions; i++) {
-//         if (match(c, relevant_deltas[i])) {
-//             move_state(relevant_deltas[i].dest);
-//             if(final_state(relevant_deltas[i])) {
-//                 return relevant_deltas[i]->dest->token;
-//             }
-//         }
-//     }
-//     return ;
-// }
+int match_regex(char *string, char ch){      
+    regex_t regex;
+    int reti;
+    char msgbuf[100];
+    char string_to_match[2] = {ch, '\0'};
+
+    reti = regcomp(&regex, string, 0);
+    if (reti) {
+        fprintf(stderr, "Could not compile regex\n");
+        exit(1);
+    }
+
+    reti = regexec(&regex, string_to_match, 0, NULL, 0);
+    
+    if (!reti) {
+        regfree(&regex);
+        return 1;
+    }
+    else if (reti == REG_NOMATCH) {
+        regfree(&regex);
+        return 0;
+    }
+    else {
+        regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+        fprintf(stderr, "Regex match failed: %s\n", msgbuf);
+        exit(1);
+    }
+}
+
+ReturnState consume(Automaton a, char c) {
+    //exemplo delta 0,[a-z],1
+    for (int i = 0; i < a->n_functions; i++) {
+        // estados que possuem o estado inicial como o current_state
+        if(!strcmp(a->transition_functions[i].src.state_name, a->current_state->state_name)){
+            if(match_regex(a->transition_functions[i].transition, c)){
+                ReturnState return_structure;
+                return_structure = (ReturnState) malloc(sizeof(struct returnState));
+                strcpy(return_structure->token_name, a->transition_functions[i].dest.token_name);
+                return_structure->tokenType = a->transition_functions[i].dest.token_type;
+                return_structure->returnCar = a->transition_functions[i].dest.return_car;
+                a->current_state = &(a->transition_functions[i].dest);
+                return return_structure;
+            }
+        }
+    }
+    return NULL;
+}
+
+int reset_automaton(Automaton *a){
+    (*a)->current_state = (*a)->begin_state;
+    return 0;
+}

@@ -6,7 +6,6 @@
 #include "token.h"
 
 
-char *getTokenType(ReturnState state);
 Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens);
 
 int main(int argc, char* argv[]) {
@@ -28,6 +27,10 @@ int main(int argc, char* argv[]) {
 
     tokens = getTokens(source_code, automaton_path, &n_tokens);
 
+    for(int i=0; i<n_tokens; i++){
+        print_token(tokens[i]);
+        printf("==============\n");
+    }
     for(int i = 0; i < n_tokens; i++) {
         free(tokens[i]);
     }
@@ -51,68 +54,30 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
         if (add_char(tokens[current_token], car) < 0) {
             printf("Max token name limit reached for '%s'\n", get_name(tokens[current_token]));
             printf("Line: %d, Column: %d\n", current_line, current_column);
+            exit(1);
         }
-
-        if (state->tokenID < 0) {
+        if (state == NULL) {
             printf("Invalid token: '%s'\n", get_name(tokens[current_token]));
             printf("Line: %d, Column: %d\n", get_line(tokens[current_token]), get_column(tokens[current_token]));
             exit(1);
-        } else if (state->tokenID == 0) {
+        } else if (state->tokenType < 0) {
             current_column++;
         } else {
             if(state->returnCar) {
                 fseek(source_code, -1, SEEK_CUR);
-            } else {
                 remove_char(tokens[current_token]);
             }
-            strncpy(get_type(tokens[current_token]), getTokenType(state), sizeof(get_type(tokens[current_token])));
+            set_name(tokens[current_token], state->token_name);
+            set_type(tokens[current_token], state->tokenType);
             tokens[++current_token] = create_token(current_line, current_column + 1);
+            reset_automaton(&automaton);
         }
     }
 
-    destroy_automaton(automaton);
-    *n_tokens = current_token - 1;
+    //destroy_automaton(automaton);
+    *n_tokens = current_token;
+    //printf("n_token %d\n", current_token);
     return tokens;
 }
 
-char *getTokenType(ReturnState state) {
-    switch (state->tokenID)
-    {
-    case PROG:
-        return "PROG";
-    case ID:
-        return "ID";
-    case OCURL:
-        return "OCURL";
-    case CCURL:
-        return "CCURL";
-    case IF:
-        return "IF";
-    case THEN:
-        return "THEN";
-    case ELSE:
-        return "ELSE";
-    case RELOP:
-        return "RELOP";
-    case TYPE:
-        return "TYPE";
-    case OP:
-        return "OP";
-    case OPAR:
-        return "OPAR";
-    case CPAR:
-        return "CPAR";
-    case COLON:
-        return "COLON";
-    case WHILE:
-        return "WHILE";
-    case DO:
-        return "DO";
-    case CONST:
-        return "CONST";
-    case COMMT:
-        return "COMMT";
-    default:
-        return NULL;
-    }
-}
+
