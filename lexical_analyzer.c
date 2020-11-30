@@ -86,5 +86,3 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
     *n_tokens = current_token;
     return tokens;
 }
-
-
