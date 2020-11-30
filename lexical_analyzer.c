@@ -27,6 +27,7 @@ int main(int argc, char* argv[]) {
 
     tokens = getTokens(source_code, automaton_path, &n_tokens);
 
+    printf("==============\n");
     for(int i=0; i<n_tokens; i++){
         print_token(tokens[i]);
         printf("==============\n");
@@ -74,9 +75,7 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
         }
     }
 
-    //destroy_automaton(automaton);
     *n_tokens = current_token;
-    //printf("n_token %d\n", current_token);
     return tokens;
 }
 
