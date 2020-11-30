@@ -46,12 +46,9 @@ struct automaton {
     Delta transition_functions[300];
     int n_functions;
     State *begin_state;
-    State final_states[300];
-    int n_final_states;
     State *current_state;
 };
 
-int load_final(Automaton *a, char *final);
 int load_initial(Automaton *a, char *initial);
 void load_states(Automaton *a, char *states);
 int load_deltas(Automaton *a, char *delta);
@@ -112,65 +109,7 @@ Automaton create_automaton(char* path) {
         printf("Could not find the automaton initial state\n");
         return NULL;
     }
-    fscanf(f, "%s", temp); // Read "final"
-    //Read the automaton final states
-    if(!strcmp(temp, "final")) {
-        fscanf(f, "%s", temp); //Read final states
-        if(!load_final(&a, temp))
-            return NULL;
-        if(a->n_final_states == 1)
-          printf("Final state:\n" "%s\n", a->final_states[0].state_name);
-        else if(a->n_final_states <= 0){
-          printf("The automaton must have at least one final state\n");
-          return NULL;
-        }
-    }
-    else {
-        printf("Could not find the automaton final state\n");
-        return NULL;
-    }
     return a;
-}
-
-//Returns 1 if success, 0 if fails
-int load_final(Automaton *a, char *final) {
-    int i = 0, j = 0, k = 0, m = 0; //k: final states amount
-    char temp[16];
-    //i go through the automaton states
-    //j go through the temp and final state vectors
-    //k go through the final state vector
-    //m go through the final vector
-    while(1) { //Go through the received final state vector
-        if(final[m] != ',' && final[m] != '\0') { //Verify if the read word is done
-            if((*a)->states[i].state_name[j] == final[m]) {  //Verify if each character is the same
-                temp[j] = final[m];
-                temp[j+1] = '\0';
-                j++;
-                m++;
-            } else { //If the two states are different, advance to the next state
-                if(i < (*a)->n_states) { //Verify if the states are done
-                    i++;
-                }
-                else { //If all the states are done, return error
-                    printf("Invalid final state found\n");
-                    return 0;
-                }
-            }
-        } else { //If the word is over, write temp in a final state
-            int n;
-            for(n = 0; n < strlen(temp); n++) {
-                (*a)->final_states[k].state_name[n] = temp[n];
-            }
-            temp[0] = '\0';
-            k++;
-            if(final[m] == '\0') break;
-            m++;
-            j = 0;
-            i = 0;
-        }
-    }
-    (*a)->n_final_states = k;
-    return 1;
 }
 
 //Returna 1 if success, 0 if error
@@ -431,15 +370,9 @@ void show_automaton(Automaton a){
     printf("Number of states: %d\n",a->n_states);
     printf("Transition functions\n");
     for(i=0;i<a->n_functions;i++)
-        printf("Origin: %s\t Destination: %s\t Transition: %s\n",a->transition_functions[i].src.state_name,a->transition_functions[i].dest.state_name,a->transition_functions[i].transition);
+        printf("Source: %s\t Destination: %s\t Transition: %s\n",a->transition_functions[i].src.state_name,a->transition_functions[i].dest.state_name,a->transition_functions[i].transition);
     printf("Amount of transition functions: %d\n",a->n_functions);
     printf("Initial states: \"%s\"\n",a->begin_state->state_name);
-    if(a->n_final_states > 1)
-      printf("Final states: ");
-    else
-      printf("Final state: ");
-    for(i=0;i<a->n_final_states;i++)
-        printf("\"%s\"\n",a->final_states[i].state_name);
 }
 
 void show_states(Automaton a){

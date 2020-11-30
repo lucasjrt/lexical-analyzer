@@ -50,6 +50,7 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
     Token *tokens = (Token*) malloc(1000 * sizeof(Token));
     tokens[current_token] = create_token(current_line, current_column);
     ReturnState state;
+    int pending = 0;
     while((car = fgetc(source_code)) != EOF) {
         state = consume(automaton, car);
         if (add_char(tokens[current_token], car) < 0) {
@@ -63,6 +64,7 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
             exit(1);
         } else if (state->tokenType < 0) {
             current_column++;
+            pending = 1;
         } else {
             if(state->returnCar) {
                 fseek(source_code, -1, SEEK_CUR);
@@ -72,9 +74,15 @@ Token *getTokens(FILE *source_code, char *automaton_path, int *n_tokens) {
             set_type(tokens[current_token], state->tokenType);
             tokens[++current_token] = create_token(current_line, current_column + 1);
             reset_automaton(&automaton);
+            pending = 0;
         }
     }
-
+    if (pending) {
+        state = consume(automaton, '\n');
+        set_name(tokens[current_token], state->token_name);
+        set_type(tokens[current_token], state->tokenType);
+        current_token++;
+    }
     *n_tokens = current_token;
     return tokens;
 }
