@@ -35,7 +35,7 @@ typedef struct state State;
 struct delta {
     State src;
     State dest;
-    char transition[15];
+    char transition[3500];
 };
 typedef struct delta Delta;
 
@@ -67,7 +67,7 @@ Automaton create_automaton(char* path) {
       return NULL;
     }
     Automaton a = (Automaton) malloc(sizeof(struct automaton));
-    char temp[300];
+    char temp[3500];
     //Loads automaton states
     fscanf(f, "%s", temp); //Read "states"
     if(!strcmp(temp, "states")) {
@@ -191,10 +191,10 @@ int load_deltas(Automaton *a, char *delta) {
                     exit(1);
                 }
                 j++;
-                char temp_regex[15];
+                char temp_regex[3500];
                 k = 0;
                 while(delta[j] != '"') {
-                    if (k >= 14) {
+                    if (k >= 3500) {
                         printf("Max regex size reached at %d\n", j);
                         exit(1);
                     }
@@ -202,7 +202,7 @@ int load_deltas(Automaton *a, char *delta) {
                 }
                 temp_regex[k] = '\0';
 
-                strncpy((*a)->transition_functions[current_delta].transition, temp_regex, 15);
+                strncpy((*a)->transition_functions[current_delta].transition, temp_regex, 3500);
                 j++;
                 if (delta[j] != ',') {
                     printf("Expected ',' at %d\n", j);
