@@ -1,0 +1,14 @@
+programa main {
+    int x;
+    real y;
+    char z;
+    [*Comentario*]
+    se (5>7)entao{
+        z := 'abc';
+    }senao {
+        z := '123';
+    }
+    faca{
+        x = x- 1;
+    } enquanto (x >0);
+}
